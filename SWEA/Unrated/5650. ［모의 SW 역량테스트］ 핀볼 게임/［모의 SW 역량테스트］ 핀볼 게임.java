@@ -25,7 +25,6 @@
 //System.out.println(var);		       				   // 문자열 1개 출력하는 예제
 //System.out.println(AB);		       				     // long 변수 1개 출력하는 예제
 /////////////////////////////////////////////////////////////////////////////////////////////
-
 import java.util.Scanner;
 import java.io.FileInputStream;
 
@@ -38,6 +37,9 @@ class Solution {
 	static int[][] map;
 	static int[][] dir = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
 	static int curDir;
+	
+	static int[][][] wormhole;
+	static int[] wormCnt;
 
 	public static void main(String args[]) throws Exception {
 		/*
@@ -61,9 +63,23 @@ class Solution {
 		for (int test_case = 1; test_case <= T; test_case++) {
 			n = sc.nextInt();
 			map = new int[n][n];
+			wormhole = new int[11][2][2];
+			wormCnt = new int[11];
+			
 			for (int i = 0; i < n; i++) {
 				for (int j = 0; j < n; j++) {
 					map[i][j] = sc.nextInt();
+					
+					if(map[i][j] >= 6 && map[i][j] <= 10) {
+
+					    int num = map[i][j];
+					    int idx = wormCnt[num];
+
+					    wormhole[num][idx][0] = i;
+					    wormhole[num][idx][1] = j;
+
+					    wormCnt[num]++;
+					}
 				}
 			}
 
@@ -208,16 +224,15 @@ class Solution {
 		int resultX = 0;
 		int resultY = 0;
 		int target = map[nextX][nextY];
-
-		for (int i = 0; i < n; i++) {
-			for (int j = 0; j < n; j++) {
-				if (map[i][j] == target && (i != nextX || j != nextY)) { // 같은건 안가져오게
-					resultX = i;
-					resultY = j;
-				}
-			}
+		
+		if(wormhole[target][0][0] == nextX && wormhole[target][0][1] == nextY) {
+			resultX = wormhole[target][1][0];
+			resultY = wormhole[target][1][1];
+		} else {
+			resultX = wormhole[target][0][0];
+			resultY = wormhole[target][0][1];
 		}
-
+		
 		int[] result = { resultX, resultY };
 		return result;
 
