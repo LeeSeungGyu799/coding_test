@@ -1,88 +1,77 @@
 class Solution {
-    static int[] weak;
-    static int[] dist;
-
-    static int weakLen;
-    static int answer;
-
-    static boolean[] visited;
-    static int[] order;
-
+    static int length;
+    static int[] weakList;
+    static int[] workerList;
+    static int minWorker;
+    static boolean[] isWorking;
+    static int[] nowWork;
+    
     public int solution(int n, int[] weak, int[] dist) {
-
-        this.weak = weak;
-        this.dist = dist;
-
-        weakLen = weak.length;
-        answer = Integer.MAX_VALUE;
-
-        visited = new boolean[dist.length];
-        order = new int[dist.length];
-
-        int[] extendedWeak = new int[weakLen * 2];
-
-        for (int i = 0; i < weakLen; i++) {
-            extendedWeak[i] = weak[i];
-            extendedWeak[i + weakLen] = weak[i] + n;
-        }
-
-        permutation(0, extendedWeak);
-
-        return answer == Integer.MAX_VALUE ? -1 : answer;
+        length = n;
+        weakList = weak;
+        workerList = dist;
+        
+        int startLoc = weak[0];
+        
+        minWorker = Integer.MAX_VALUE;
+        isWorking = new boolean[dist.length];
+        nowWork = new int[dist.length];
+        
+        dfs(0);
+        
+        if(minWorker == Integer.MAX_VALUE)
+            return -1;
+        return minWorker;
     }
-
-    static void permutation(int depth, int[] extendedWeak) {
-
-        if (depth == dist.length) {
-            check(extendedWeak);
+    
+    public void dfs(int depth) {
+        if(depth >= minWorker) { // pruning
             return;
         }
-
-        for (int i = 0; i < dist.length; i++) {
-
-            if (visited[i]) {
-                continue;
-            }
-
-            visited[i] = true;
-            order[depth] = dist[i];
-
-            permutation(depth + 1, extendedWeak);
-
-            visited[i] = false;
+        
+        //탈출조건
+        if(depth > 0 && check(depth)) {
+            minWorker = depth;
+            return;
+        }
+        
+        for(int i = 0; i < workerList.length; i++) {
+            if(!isWorking[i]) {
+                isWorking[i] = true;
+                nowWork[depth] = workerList[i];
+                dfs(depth+1);
+                isWorking[i] = false;
+            }           
         }
     }
-
-    static void check(int[] extendedWeak) {
-
-        // 시작 취약점 위치를 하나씩 바꿈
-        for (int start = 0; start < weakLen; start++) {
-
+    
+    public boolean check(int workerCnt) {
+        int weakCnt = weakList.length;
+        for(int i = 0; i < weakCnt; i++) {
             int friend = 0;
-
-            int coverage =
-                    extendedWeak[start] + order[friend];
-
-            for (int idx = start;
-                 idx < start + weakLen;
-                 idx++) {
-
-                if (extendedWeak[idx] > coverage) {
-
+            int covered = weakList[i] + nowWork[friend];
+            
+            boolean isDone = true;
+            
+            for(int j = 0; j < weakCnt; j++) {
+                int weakIndex = (i+j) % weakCnt;
+                int weakPosition = weakList[weakIndex];
+                if(weakIndex < i)
+                    weakPosition += length;
+                
+                if(weakPosition > covered) {
                     friend++;
-
-                    if (friend >= order.length) {
+                    if(friend == workerCnt) {
+                        isDone = false;
                         break;
                     }
-
-                    coverage =
-                            extendedWeak[idx] + order[friend];
+                    covered = weakPosition + nowWork[friend];
                 }
             }
-
-            if (friend < order.length) {
-                answer = Math.min(answer, friend + 1);
-            }
+            if(isDone)
+                return true;    
         }
+        return false;
     }
+    
 }
