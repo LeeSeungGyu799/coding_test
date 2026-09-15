@@ -1,111 +1,152 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.ArrayDeque;
-import java.util.StringTokenizer;
 
-class Solution {
-	static char[][] map;
-	static int n, toDelete, click;
-	static boolean[][] checked;
-	static int[][] dir = { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 }, { 1, 1 }, { -1, -1 }, { -1, 1 }, { 1, -1 } };
+import java.io.*;
+import java.util.*;
 
-	public static void main(String args[]) throws Exception {
+public class Solution {
 
-		BufferedReader bf = new BufferedReader(new InputStreamReader(System.in));
-		int T = Integer.parseInt(bf.readLine());
-		String s;
-		StringTokenizer st;
-		StringBuilder sb;
+    static int N;
+    static char[][] map;
+    static int[][] mineCnt;
+    static boolean[][] visited;
 
-		for (int test_case = 1; test_case <= T; test_case++) {
-			sb = new StringBuilder();
-			n = Integer.parseInt(bf.readLine());
-			map = new char[n][n];
-			toDelete = n * n;
+    // 8방향
+    static int[] dr = {-1, -1, -1, 0, 0, 1, 1, 1};
+    static int[] dc = {-1, 0, 1, -1, 1, -1, 0, 1};
 
-			for (int i = 0; i < n; i++) {
-				s = bf.readLine();
-				for (int j = 0; j < n; j++) {
-					map[i][j] = s.charAt(j);
-					if (map[i][j] == '*')
-						toDelete--;
-				}
-			}
+    public static void main(String[] args) throws Exception {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StringBuilder sb = new StringBuilder();
 
-			checked = new boolean[n][n];
-			click = 0;
+        int T = Integer.parseInt(br.readLine());
 
-			selectZero();
+        for (int tc = 1; tc <= T; tc++) {
 
-			click += toDelete;
+            N = Integer.parseInt(br.readLine());
 
-			sb.append("#").append(test_case).append(" ").append(click);
-			System.out.println(sb);
-		}
-	}
+            map = new char[N][N];
+            mineCnt = new int[N][N];
+            visited = new boolean[N][N];
 
-	public static void selectZero() {
-		for (int i = 0; i < n; i++) {
-			for (int j = 0; j < n; j++) {
-				if (map[i][j] == '*')
-					continue;
-				if (!checked[i][j]) {
-					if (checkZero(i, j)) {
-						revealZero(i, j);
-						click++;
-					}
-				}
-			}
-		}
-	}
+            for (int i = 0; i < N; i++) {
+                map[i] = br.readLine().toCharArray();
+            }
 
-	public static boolean checkZero(int x, int y) {
-		for (int i = 0; i < 8; i++) {
-			int nx = x + dir[i][0];
-			int ny = y + dir[i][1];
+            // 각 칸 주변의 지뢰 개수 계산
+            calculateMineCount();
 
-			if (nx < 0 || ny < 0 || nx >= n || ny >= n)
-				continue;
-			if (map[nx][ny] == '*')
-				return false;
-		}
-		return true;
-	}
+            int answer = 0;
 
-	public static void revealZero(int x, int y) {
-		// bfs
-		// 맨 처음, 클릭한 곳을 q에 넣는다.
-		// while(!q.isEmpty())
-		// q. poll
-		// checked = true
-		// todelete --;
-		// checkZero가 true라면 checked가 false인 주변 8개 칸을 q에 넣는다
-		// checkZero가 false라면
+            // 1. 주변 지뢰가 0인 칸부터 클릭
+            for (int r = 0; r < N; r++) {
+                for (int c = 0; c < N; c++) {
 
-		ArrayDeque<int[]> q = new ArrayDeque<>();
-		int[] pos = new int[2];
-		pos[0] = x;
-		pos[1] = y;
-		q.offer(pos);
+                    if (map[r][c] == '.' &&
+                        !visited[r][c] &&
+                        mineCnt[r][c] == 0) {
 
-		while (!q.isEmpty()) {
-			pos = q.poll();
-			if(checked[pos[0]][pos[1]]) 
-				continue;
-			checked[pos[0]][pos[1]] = true;
-			toDelete--;
-			if (checkZero(pos[0], pos[1])) {
-				for (int i = 0; i < 8; i++) {
-					int nx = pos[0] + dir[i][0];
-					int ny = pos[1] + dir[i][1];
+                        bfs(r, c);
+                        answer++;
+                    }
+                }
+            }
 
-					if (nx < 0 || ny < 0 || nx >= n || ny >= n)
-						continue;
-					if (!checked[nx][ny]) {
-						q.offer(new int[] { nx, ny });
-					}
-				}
-			}
-		}
-	}
+            // 2. BFS로 열리지 않은 일반 칸들은 각각 클릭해야 함
+            for (int r = 0; r < N; r++) {
+                for (int c = 0; c < N; c++) {
+
+                    if (map[r][c] == '.' && !visited[r][c]) {
+                        answer++;
+                    }
+                }
+            }
+
+            sb.append("#")
+              .append(tc)
+              .append(" ")
+              .append(answer)
+              .append("\n");
+        }
+
+        System.out.print(sb);
+    }
+
+    // 모든 빈 칸에 대해 주변 지뢰 개수 계산
+    static void calculateMineCount() {
+
+        for (int r = 0; r < N; r++) {
+            for (int c = 0; c < N; c++) {
+
+                // 지뢰 칸은 계산하지 않음
+                if (map[r][c] == '*') {
+                    mineCnt[r][c] = -1;
+                    continue;
+                }
+
+                int count = 0;
+
+                for (int d = 0; d < 8; d++) {
+                    int nr = r + dr[d];
+                    int nc = c + dc[d];
+
+                    if (!isRange(nr, nc)) {
+                        continue;
+                    }
+
+                    if (map[nr][nc] == '*') {
+                        count++;
+                    }
+                }
+
+                mineCnt[r][c] = count;
+            }
+        }
+    }
+
+    // 0인 칸을 클릭했을 때 연쇄적으로 열리는 칸 처리
+    static void bfs(int startR, int startC) {
+
+        Queue<int[]> queue = new ArrayDeque<>();
+
+        queue.offer(new int[]{startR, startC});
+        visited[startR][startC] = true;
+
+        while (!queue.isEmpty()) {
+
+            int[] cur = queue.poll();
+
+            int r = cur[0];
+            int c = cur[1];
+
+            // 주변 지뢰가 있는 칸이면
+            // 해당 칸까지만 열리고 더 이상 확장하지 않음
+            if (mineCnt[r][c] != 0) {
+                continue;
+            }
+
+            for (int d = 0; d < 8; d++) {
+
+                int nr = r + dr[d];
+                int nc = c + dc[d];
+
+                if (!isRange(nr, nc)) {
+                    continue;
+                }
+
+                if (map[nr][nc] == '*') {
+                    continue;
+                }
+
+                if (visited[nr][nc]) {
+                    continue;
+                }
+
+                visited[nr][nc] = true;
+                queue.offer(new int[]{nr, nc});
+            }
+        }
+    }
+
+    static boolean isRange(int r, int c) {
+        return r >= 0 && r < N && c >= 0 && c < N;
+    }
 }
