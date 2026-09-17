@@ -1,134 +1,154 @@
 import java.io.*;
-import java.util.*;
 
-class Solution {
+public class Solution {
+    static final int LIMIT = 4000;
+
+    // 상(0), 하(1), 좌(2), 우(3)
+    // 위로 이동하면 y가 증가한다.
+    static final int[] DX = {0, 0, -1, 1};
+    static final int[] DY = {1, -1, 0, 0};
+
+    // 해당 시간에 각 좌표에 도착한 원자 수
+    static final int[][] count = new int[LIMIT + 1][LIMIT + 1];
 
     static class Atom {
         int x;
         int y;
-        int dir;
+        int direction;
         int energy;
+        boolean alive = true;
 
-        Atom(int x, int y, int dir, int energy) {
+        Atom(int x, int y, int direction, int energy) {
             this.x = x;
             this.y = y;
-            this.dir = dir;
+            this.direction = direction;
             this.energy = energy;
         }
     }
 
-    // 0: 상, 1: 하, 2: 좌, 3: 우
-    static int[] dx = {0, 0, -1, 1};
-    static int[] dy = {1, -1, 0, 0};
+    static int simulate(Atom[] atoms) {
+        int size = atoms.length;
+        int totalEnergy = 0;
 
-    static final int MIN = -2000;
-    static final int MAX = 2000;
-    static final int OFFSET = 2000;
-    static final int SIZE = 4001;
+        while (size > 1) {
+            int moved = 0;
 
-    static ArrayList<Atom> atoms;
+            // 1. 모든 원자를 0.5초만큼 이동시킨다.
+            for (int i = 0; i < size; i++) {
+                Atom atom = atoms[i];
 
-    // 해당 위치에 존재하는 원자 개수
-    static byte[][] map = new byte[SIZE][SIZE];
+                atom.x += DX[atom.direction];
+                atom.y += DY[atom.direction];
 
-    public static void main(String[] args) throws Exception {
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        StringTokenizer st;
-        StringBuilder sb = new StringBuilder();
-
-        int T = Integer.parseInt(br.readLine());
-
-        for (int tc = 1; tc <= T; tc++) {
-
-            int N = Integer.parseInt(br.readLine());
-
-            atoms = new ArrayList<>();
-
-            for (int i = 0; i < N; i++) {
-
-                st = new StringTokenizer(br.readLine());
-
-                // 0.5 위치에서 충돌하는 경우를 처리하기 위해 2배
-                int x = Integer.parseInt(st.nextToken()) * 2;
-                int y = Integer.parseInt(st.nextToken()) * 2;
-                int dir = Integer.parseInt(st.nextToken());
-                int energy = Integer.parseInt(st.nextToken());
-
-                atoms.add(new Atom(x, y, dir, energy));
-            }
-
-            int answer = simulation();
-
-            sb.append("#")
-              .append(tc)
-              .append(" ")
-              .append(answer)
-              .append("\n");
-        }
-
-        System.out.print(sb);
-    }
-
-    static int simulation() {
-
-        int answer = 0;
-
-        while (atoms.size() >= 2) {
-
-            ArrayList<Atom> movedAtoms = new ArrayList<>(atoms.size());
-
-            // 1. 모든 원자 이동
-            for (Atom atom : atoms) {
-
-                atom.x += dx[atom.dir];
-                atom.y += dy[atom.dir];
-
-                // 범위를 벗어나면 앞으로 충돌할 일이 없음
-                if (atom.x < MIN || atom.x > MAX ||
-                    atom.y < MIN || atom.y > MAX) {
+                // 범위를 벗어난 원자는 앞으로 충돌할 수 없다.
+                // 충돌이 아니므로 에너지는 더하지 않는다.
+                if (atom.x < 0 || atom.x > LIMIT
+                        || atom.y < 0 || atom.y > LIMIT) {
                     continue;
                 }
 
-                movedAtoms.add(atom);
+                atoms[moved++] = atom;
+                count[atom.x][atom.y]++;
+            }
 
-                int nx = atom.x + OFFSET;
-                int ny = atom.y + OFFSET;
+            // 2. 이동이 모두 끝난 뒤 충돌 여부를 판정한다.
+            // 이 단계에서는 count를 초기화하면 안 된다.
+            for (int i = 0; i < moved; i++) {
+                Atom atom = atoms[i];
 
-                // 2개 이상인지만 알면 되므로
-                if (map[nx][ny] < 2) {
-                    map[nx][ny]++;
+                if (count[atom.x][atom.y] >= 2) {
+                    totalEnergy += atom.energy;
+                    atom.alive = false;
                 }
             }
 
-            ArrayList<Atom> nextAtoms = new ArrayList<>(movedAtoms.size());
+            // 3. 사용한 좌표를 초기화하고 살아남은 원자만 모은다.
+            int survivors = 0;
 
-            // 2. 충돌 확인
-            for (Atom atom : movedAtoms) {
+            for (int i = 0; i < moved; i++) {
+                Atom atom = atoms[i];
 
-                int nx = atom.x + OFFSET;
-                int ny = atom.y + OFFSET;
+                count[atom.x][atom.y] = 0;
 
-                if (map[nx][ny] >= 2) {
-                    // 같은 위치에 2개 이상이면 전부 소멸
-                    answer += atom.energy;
-                } else {
-                    nextAtoms.add(atom);
+                if (atom.alive) {
+                    atoms[survivors++] = atom;
                 }
             }
 
-            // 3. 이번 턴에서 사용했던 map만 초기화
-            for (Atom atom : movedAtoms) {
-
-                int nx = atom.x + OFFSET;
-                int ny = atom.y + OFFSET;
-
-                map[nx][ny] = 0;
-            }
-
-            atoms = nextAtoms;
+            size = survivors;
         }
 
-        return answer;
+        return totalEnergy;
+    }
+
+    public static void main(String[] args) throws IOException {
+        FastScanner fs = new FastScanner();
+        StringBuilder answer = new StringBuilder();
+
+        int T = fs.nextInt();
+
+        for (int tc = 1; tc <= T; tc++) {
+            int n = fs.nextInt();
+            Atom[] atoms = new Atom[n];
+
+            for (int i = 0; i < n; i++) {
+                // 음수를 없앤 뒤 좌표를 2배로 확대한다.
+                int x = (fs.nextInt() + 1000) * 2;
+                int y = (fs.nextInt() + 1000) * 2;
+
+                int direction = fs.nextInt();
+                int energy = fs.nextInt();
+
+                atoms[i] = new Atom(x, y, direction, energy);
+            }
+
+            answer.append('#').append(tc).append(' ')
+                  .append(simulate(atoms)).append('\n');
+        }
+
+        System.out.print(answer);
+    }
+
+    static class FastScanner {
+        private final InputStream in = System.in;
+        private final byte[] buffer = new byte[1 << 16];
+        private int pointer = 0;
+        private int length = 0;
+
+        private int read() throws IOException {
+            if (pointer >= length) {
+                length = in.read(buffer);
+                pointer = 0;
+
+                if (length <= 0) return -1;
+            }
+
+            return buffer[pointer++] & 0xff;
+        }
+
+        int nextInt() throws IOException {
+            int c;
+
+            do {
+                c = read();
+                if (c == -1) throw new EOFException();
+            } while (c <= ' ');
+
+            int sign = 1;
+
+            if (c == '-') {
+                sign = -1;
+                c = read();
+            }
+
+            int value = 0;
+
+            while (c >= '0' && c <= '9') {
+                value = value * 10 + c - '0';
+                c = read();
+            }
+
+            return value * sign;
+        }
     }
 }
