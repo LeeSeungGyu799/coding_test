@@ -8,9 +8,9 @@ int fact(int a)
 }
 int main()
 {
-	int n, k;
+	int n, m;
 	int number;
-	scanf("%d %d", &n, &k);
-	number = fact(n) / (fact(k) *fact(n - k));
+	scanf("%d %d", &n, &m);
+	number = fact(n) / (fact(m) *fact(n - m));
 	printf("%d", number);
 }
